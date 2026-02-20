@@ -36,8 +36,7 @@ resource "aws_db_instance" "default" {
   deletion_protection       = true
 
   # Performance Insights (FREE on db.t3.micro for 7 days)
-  performance_insights_enabled          = true
-  performance_insights_retention_period = 7
+  performance_insights_enabled          = false
 
   tags = {
     Name = "${var.project_name}-rds"

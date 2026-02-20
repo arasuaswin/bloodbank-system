@@ -68,6 +68,10 @@ $TF_PATH = $ROOT + '\terraform'
 Set-Location -Path $TF_PATH
 terraform init -input=false
 terraform apply -auto-approve
+if ($LASTEXITCODE -ne 0) {
+    Write-Host '  Terraform apply failed. Aborting deployment.' -ForegroundColor Red
+    exit $LASTEXITCODE
+}
 
 # ============ STEP 2: Get Outputs ============
 Write-Host ""
@@ -112,16 +116,32 @@ Write-Host ''
 Write-Host '[4/7] Building Docker Image...' -ForegroundColor Yellow
 $BNEXT_PATH = $ROOT + '\bloodbank-next'
 Set-Location -Path $BNEXT_PATH
-docker build -t bloodbank-app .
+docker build --network=host -t bloodbank-app .
+if ($LASTEXITCODE -ne 0) {
+    Write-Host '  Docker build failed!' -ForegroundColor Red
+    exit $LASTEXITCODE
+}
 
 # ============ STEP 5: Push to ECR ============
 Write-Host ''
 Write-Host '[5/7] Pushing to Amazon ECR...' -ForegroundColor Yellow
 $ECR_HOST = $ECR_REPO_URL.Split('/')[0]
 aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ECR_HOST
+if ($LASTEXITCODE -ne 0) {
+    Write-Host '  Docker login to ECR failed!' -ForegroundColor Red
+    exit $LASTEXITCODE
+}
 $TAG_URL = $ECR_REPO_URL + ':latest'
 docker tag bloodbank-app:latest $TAG_URL
+if ($LASTEXITCODE -ne 0) {
+    Write-Host '  Docker tag failed!' -ForegroundColor Red
+    exit $LASTEXITCODE
+}
 docker push $TAG_URL
+if ($LASTEXITCODE -ne 0) {
+    Write-Host '  Docker push failed!' -ForegroundColor Red
+    exit $LASTEXITCODE
+}
 
 # ============ STEP 6: Run Database Migration ============
 Write-Host ''
