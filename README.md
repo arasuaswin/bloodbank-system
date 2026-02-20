@@ -158,29 +158,40 @@ This project has been heavily optimized for cloud environments, significantly re
 4. **Auto-Migration Script**: Database schema pushing is not an afterthought. The container spins up executing `start.js`, which detects if the Prisma database is in sync with the application code and automatically triggers migrations *before* booting the listener.
 
 ### AWS Services & Cost Optimization Strategy
-This project leverages multiple enterprise-grade AWS services. Careful architectural decisions were made to provide high availability while keeping the billing tightly optimized:
+This project leverages a vast array of enterprise-grade AWS services. Architectural decisions were made to provide 99.99% high availability while keeping the billing tightly optimized:
 
-* **Amazon ECS & Fargate Spot (Compute)**
-  * **Role:** Orchestrates the Next.js Docker containers. 
-  * **Impact:** Provides serverless scale-out without managing EC2 instances.
-  * **Cost Optimization:** Instead of dedicated Fargate resources, the cluster is configured to use a `FARGATE_SPOT` capacity provider. This runs containers on surplus AWS compute power, resulting in up to **70% cost savings** compared to standard on-demand pricing.
-* **Amazon CloudFront (CDN)**
-  * **Role:** Globally distributes Next.js static assets (`/_next/static/*`) and caches them at edge locations.
-  * **Impact:** Reduces latency for users globally and shields the Fargate servers from DDoS attacks.
-  * **Cost Optimization:** By offloading static file serving to CloudFront, we reduce the traffic and CPU load on the ECS containers. We also restrict the CloudFront `PriceClass` to `PriceClass_200`, avoiding expensive edge regions.
-* **Amazon RDS MySQL (Database)**
-  * **Role:** Secure relational database hidden in private subnets.
-  * **Impact:** Provides automated backups, encryption at rest, and reliable structured storage for Prisma.
-  * **Cost Optimization:** Provisions a `db.t3.micro` instance (highly affordable) with `gp3` auto-scaling storage, meaning you only pay for exactly the disk space you use, rather than over-provisioning storage upfront.
-* **Single NAT Gateway (Networking)**
-  * **Role:** Allows private Fargate instances to pull updates and send outbound API calls (like SES emails).
-  * **Cost Optimization:** Many enterprise setups use one NAT Gateway *per Availability Zone*, which doubles or triples the hourly costs. We explicitly use a **Single NAT Gateway** for the entire VPC to slash fixed monthly network pricing by 50%.
-* **Application Load Balancer (ALB)**
-  * **Role:** Distributes traffic evenly among Fargate containers and enables zero-downtime rolling deployments.
-  * **Cost Optimization:** The Target Group is finely tuned to deregister failing containers extremely quickly, ensuring no traffic or compute seconds are wasted on crashed instances.
-* **AWS SES, Secrets Manager, CodePipeline, & KMS**
-  * **Role:** SES handles verified email delivery; Secrets Manager injects passwords at boot without exposing them; CodePipeline automates Docker builds; KMS encrypts databases and container image registries.
-  * **Cost Optimization:** These are heavily *"pay-per-use"* services that cost virtually $0.00 until your application starts receiving thousands of transactions.
+#### 1. Compute & Container Orchestration
+* **Amazon ECS & Fargate Spot:** Orchestrates the Next.js Docker containers serverlessly. Auto-scaling is configured to dynamically scale from 1 to 4 instances when CPU utilization crosses 70%.
+  * **Cost Optimization:** Instead of standard on-demand Fargate pricing, the cluster is assigned a `FARGATE_SPOT` capacity provider weight. This runs the application on surplus AWS compute power, yielding up to **70% cost savings**.
+
+#### 2. Global Delivery & Network Security
+* **Amazon CloudFront:** A global CDN that distributes Next.js static assets (`/_next/static/*` and `/images/*`) and caches them at edge locations worldwide. It enforces HTTPS and acts as a shield against DDoS attacks.
+  * **Cost Optimization:** By offloading static file serving to CloudFront, we reduce the traffic and CPU load on the ECS containers. We explicitly restrict the `PriceClass` to `PriceClass_200` to avoid the most expensive edge regions (like South America).
+* **Application Load Balancer (ALB):** Terminates SSL connections and distributes internet traffic evenly among the Fargate containers. 
+  * **Cost Optimization & Impact:** This enables **Zero-Downtime Deployments**. The Target Group is finely tuned to health-check new containers and deregister failing ones extremely quickly, ensuring no traffic or compute seconds are wasted on crashed instances.
+* **Amazon VPC & Single NAT Gateway:** The network is divided into 2 Public Subnets (for ALB) and 2 Private Subnets (for Fargate and RDS). 
+  * **Cost Optimization:** Enterprise setups often use one NAT Gateway *per Availability Zone*, which doubles or triples the massive hourly network fee. We explicitly provision a **Single NAT Gateway** for the entire VPC, instantly slashing fixed monthly network pricing by 50% while still allowing private instances to pull updates and send outbound SES API calls.
+
+#### 3. Database & Storage
+* **Amazon RDS MySQL 8.0:** A fully managed, highly secure relational database hidden safely inside the Private Subnets. It provides automated daily backups and multi-AZ failover capabilities if configured.
+  * **Cost Optimization:** Provisions a `db.t3.micro` instance (highly affordable) paired with `gp3` auto-scaling storage. You do not pay for 100GB of heavy storage upfront; AWS only bills you for the literal megabytes you are currently using.
+* **Amazon S3:** Used temporarily by the CodePipeline to store zipped source code artifacts during the build process.
+
+#### 4. Automated CI/CD Setup
+* **AWS CodePipeline, CodeBuild, & ECR:** The CI/CD workflow natively listens to the GitHub `main` branch. Pushing code triggers CodeBuild to spin up a temporary Linux server, execute the Docker build, and push the image to the **Elastic Container Registry (ECR)**. ECR is configured to automatically scan images for vulnerabilities on push. CodePipeline then triggers ECS to perform a rolling update natively.
+
+#### 5. Cryptography & Security
+* **AWS Secrets Manager:** A highly secure vault for sensitive strings (e.g., `DATABASE_URL`, `ADMIN_PASSWORD`, `NEXTAUTH_SECRET`). Instead of hardcoding passwords, ECS securely injects these secrets at the exact moment the Fargate container boots up.
+* **AWS KMS:** Manages the cryptographic keys used to automatically enforce encryption-at-rest for both the RDS Database volumes and the ECR Docker images.
+* **AWS IAM Roles:** Granular permissions are attached to Fargate tasks to ensure containers only have access to exactly what they need (e.g., SES sending permissions, Secrets Manager reading permissions) and nothing more.
+
+#### 6. Monitoring & Automated Alerting
+* **Amazon CloudWatch:** Streams all real-time Next.js `console.log` outputs directly into a `/ecs/bloodbank-gms` Log Group. Three custom **CloudWatch Alarms** are continuously monitoring:
+  1. ECS CPU High (>80%)
+  2. RDS CPU High (>80%)
+  3. ALB Healthy Hosts Low (Containers crashed)
+* **Amazon SNS (Simple Notification Service):** If any of the above CloudWatch Alarms trigger, SNS instantly blasts an emergency email alert to the administrator's inbox.
+* **Amazon SES (Simple Email Service):** Allows the backend API to physically send verified outbound emails (OTP codes, appointments). By using the AWS SDK and IAM roles attached to the ECS task, the application naturally authenticates with SES without ever needing a hardcoded SMTP password.
 
 ### Step-by-Step AWS Setup for forkers
 
