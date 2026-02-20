@@ -138,8 +138,12 @@ resource "aws_ecs_task_definition" "app" {
       }
       environment = [
         {
-          name  = "NEXTAUTH_URL"
+          name  = "AUTH_URL"
           value = "https://${aws_cloudfront_distribution.s3_distribution.domain_name}"
+        },
+        {
+          name  = "AUTH_TRUST_HOST"
+          value = "true"
         },
         {
           name  = "PORT"
