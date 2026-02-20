@@ -1,0 +1,10 @@
+# Copy this file to terraform.tfvars and fill in values
+# terraform.tfvars is gitignored and MUST NOT be committed
+
+db_username        = "admin"
+db_password        = "YourStrongP@ssw0rd!Here"
+github_repo        = "your-username/your-repo"
+notification_email = "your-email@example.com"
+domain_name        = ""  # Optional: "bloodbank.yourdomain.com"
+admin_email        = "admin@bloodbank.com"
+admin_password     = "ChangeMe@First123"
