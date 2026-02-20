@@ -124,17 +124,22 @@ cp terraform.tfvars.example terraform.tfvars
 > ⚠️ **Note:** `terraform.tfvars` is intentionally included in `.gitignore` so your secrets are never accidentally pushed to GitHub.
 
 #### 2. Deploy Infrastructure
-Authenticate with your AWS CLI locally, then run:
+We have provided comprehensive PowerShell scripts that completely automate the provisioning, Docker building, database pushing, and AWS deployments natively for Windows machines. 
 
-```bash
-terraform init
-terraform plan
-terraform apply
+Open a PowerShell terminal as Administrator, authenticate with your AWS CLI locally, and run:
+
+```powershell
+.\deploy_aws.ps1
 ```
-Type `yes` to confirm. Terraform will provision the VPC, RDS database, ECS cluster, ALB, Security Groups, and CI/CD pipelines.
+This single script will:
+- Check for all prerequisite tools (Docker, AWS CLI, Terraform)
+- Run `terraform init` and `terraform apply` for you
+- Build the Next.js Docker image and push it to Amazon ECR
+- Attempt to automate Prisma database schema pushing
+- Force-deploy the latest container onto your ECS cluster
 
 #### 3. Connect GitHub to AWS CodePipeline
-Because your AWS account needs permission to read your public GitHub repository during builds, Terraform creates a pending connection.
+Because your AWS account needs permission to read your public GitHub repository during automated builds, Terraform creates a pending connection.
 
 1. Log into your **AWS Console**.
 2. Navigate to **Developer Tools** ➡️ **Settings** ➡️ **Connections**.
@@ -142,12 +147,20 @@ Because your AWS account needs permission to read your public GitHub repository 
 4. Click on it and choose **Update pending connection**.
 5. Follow the prompts to authorize AWS to access your GitHub repositories.
 
-#### 4. Trigger the First Deployment
-Once the GitHub connection is active:
-1. Navigate to **CodePipeline** in the AWS Console.
-2. Select your pipeline (`bloodbank-gms-pipeline`).
-3. Click **Release change** to manually start the first build process.
-4. CodeBuild will create your Next.js Docker image, push it to ECR, and start the Fargate instances!
+#### 4. Future Deployments & CI/CD
+Once the GitHub connection is active and your first Fargate instances are live:
+* **To push a new update**: Simply commit your changes to the `main` branch of your GitHub repository. AWS CodePipeline will automatically fetch the new code, rebuild the Docker image, and perform a rolling update natively.
+
+---
+
+## 🗑️ Tearing Down Infrastructure
+
+If you wish to completely destroy the AWS infrastructure to stop incurring costs, simply run the included undeploy script from a PowerShell window:
+
+```powershell
+.\undeploy_aws.ps1
+```
+This script will empty the S3 artifact buckets and safely run `terraform destroy` to remove all AWS resources.
 
 ---
 
