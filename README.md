@@ -157,6 +157,31 @@ This project has been heavily optimized for cloud environments, significantly re
 3. **Least Privilege Execution**: The Docker container refuses to run as root. It creates a dedicated unprivileged `nextjs` user (`uid 1001`), completely nullifying entire classes of container escape vulnerabilities.
 4. **Auto-Migration Script**: Database schema pushing is not an afterthought. The container spins up executing `start.js`, which detects if the Prisma database is in sync with the application code and automatically triggers migrations *before* booting the listener.
 
+### AWS Services & Cost Optimization Strategy
+This project leverages multiple enterprise-grade AWS services. Careful architectural decisions were made to provide high availability while keeping the billing tightly optimized:
+
+* **Amazon ECS & Fargate Spot (Compute)**
+  * **Role:** Orchestrates the Next.js Docker containers. 
+  * **Impact:** Provides serverless scale-out without managing EC2 instances.
+  * **Cost Optimization:** Instead of dedicated Fargate resources, the cluster is configured to use a `FARGATE_SPOT` capacity provider. This runs containers on surplus AWS compute power, resulting in up to **70% cost savings** compared to standard on-demand pricing.
+* **Amazon CloudFront (CDN)**
+  * **Role:** Globally distributes Next.js static assets (`/_next/static/*`) and caches them at edge locations.
+  * **Impact:** Reduces latency for users globally and shields the Fargate servers from DDoS attacks.
+  * **Cost Optimization:** By offloading static file serving to CloudFront, we reduce the traffic and CPU load on the ECS containers. We also restrict the CloudFront `PriceClass` to `PriceClass_200`, avoiding expensive edge regions.
+* **Amazon RDS MySQL (Database)**
+  * **Role:** Secure relational database hidden in private subnets.
+  * **Impact:** Provides automated backups, encryption at rest, and reliable structured storage for Prisma.
+  * **Cost Optimization:** Provisions a `db.t3.micro` instance (highly affordable) with `gp3` auto-scaling storage, meaning you only pay for exactly the disk space you use, rather than over-provisioning storage upfront.
+* **Single NAT Gateway (Networking)**
+  * **Role:** Allows private Fargate instances to pull updates and send outbound API calls (like SES emails).
+  * **Cost Optimization:** Many enterprise setups use one NAT Gateway *per Availability Zone*, which doubles or triples the hourly costs. We explicitly use a **Single NAT Gateway** for the entire VPC to slash fixed monthly network pricing by 50%.
+* **Application Load Balancer (ALB)**
+  * **Role:** Distributes traffic evenly among Fargate containers and enables zero-downtime rolling deployments.
+  * **Cost Optimization:** The Target Group is finely tuned to deregister failing containers extremely quickly, ensuring no traffic or compute seconds are wasted on crashed instances.
+* **AWS SES, Secrets Manager, CodePipeline, & KMS**
+  * **Role:** SES handles verified email delivery; Secrets Manager injects passwords at boot without exposing them; CodePipeline automates Docker builds; KMS encrypts databases and container image registries.
+  * **Cost Optimization:** These are heavily *"pay-per-use"* services that cost virtually $0.00 until your application starts receiving thousands of transactions.
+
 ### Step-by-Step AWS Setup for forkers
 
 If you have forked this repository and want to host it on your own AWS account, follow these steps strictly:
