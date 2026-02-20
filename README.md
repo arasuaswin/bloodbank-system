@@ -74,24 +74,63 @@ This project includes production-ready **Terraform Configuration** to deploy the
 
 ```mermaid
 graph TD
-    User([End User]) --> |HTTPS| CF[AWS CloudFront]
+    %% Define Styles
+    classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:white;
+    classDef vpc fill:#F3F3F3,stroke:#3F8624,stroke-width:2px,stroke-dasharray: 5 5;
+    classDef public fill:#E6F0FA,stroke:#0052CC,stroke-width:1px;
+    classDef private fill:#FAD7E1,stroke:#E0004D,stroke-width:1px;
+    classDef cicd fill:#F9F9F9,stroke:#5A6B86,stroke-width:2px,stroke-dasharray: 5 5;
+
+    User([👤 End User]) -->|HTTPS| CF[🌐 AWS CloudFront]
     
-    subgraph "VPC (Public & Private Subnets)"
-        CF --> |HTTP/HTTPS| ALB[Application Load Balancer]
-        ALB --> |Port 3000| ECS[Amazon ECS<br>Fargate & Spot]
+    %% Main VPC Architecture
+    subgraph VPC ["☁️ AWS Virtual Private Cloud (VPC)"]
+        direction TB
+        IGW[🚪 Internet Gateway]
         
-        ECS --> |Port 3306| RDS[(Amazon RDS<br>MySQL 8.0)]
-        ECS --> |API Calls| SES[Amazon SES<br>Email Notifications]
+        %% Public Tier
+        subgraph PublicSubnets ["🌐 Public Subnets (AZ-a / AZ-b)"]
+            ALB[⚖️ Application Load Balancer]
+            NAT[🔄 NAT Gateway]
+            ECS[🐳 Amazon ECS<br>Fargate & Spot Instances]
+        end
+        
+        %% Private Tier
+        subgraph PrivateSubnets ["🔒 Private Subnets (AZ-a / AZ-b)"]
+            RDS[(🗄️ Amazon RDS MySQL 8.0)]
+        end
+        
+        %% Network flow
+        IGW --- PublicSubnets
+        ALB -->|Port 3000| ECS
+        ECS -->|Outbound Web/Updates| NAT
+        NAT --> IGW
+        ECS -->|Port 3306| RDS
+    end
+
+    %% External Connections from VPC
+    CF -->|HTTP/HTTPS| ALB
+    ECS -->|API via NAT| SES[📧 Amazon SES]
+    
+    %% CI/CD Setup
+    subgraph CICD ["⚙️ CI/CD & Security"]
+        direction LR
+        GH[(🐙 GitHub Repo)] -.->|Webhook| CP[🛣️ AWS CodePipeline]
+        CP -.-> CB[🛠️ AWS CodeBuild]
+        CB -.->|Builds & Pushes| ECR[📦 Amazon ECR]
+        CB -.->|Triggers Update| ECS
+        
+        SM[🔑 AWS Secrets Manager] -.->|Injects DB/Auth Secrets| ECS
+        KMS[🗝️ AWS KMS] -.->|Encrypts| RDS
+        KMS -.->|Encrypts| ECR
     end
     
-    subgraph "CI/CD & Security"
-        GitHub[(GitHub Repo)] -.-> |Webhook| CP[AWS CodePipeline]
-        CP -.-> CB[AWS CodeBuild]
-        CB -.-> |Push Image| ECR[Amazon ECR]
-        CB -.-> |Update| ECS
-        
-        SM[AWS Secrets Manager] -.-> |Injects Secrets| ECS
-    end
+    %% Apply Styles
+    class CF,ALB,ECS,RDS,NAT,IGW,SES,CP,CB,ECR,SM,KMS aws;
+    class VPC vpc;
+    class PublicSubnets public;
+    class PrivateSubnets private;
+    class CICD cicd;
 ```
 
 ### CI/CD Practices (Continuous Integration & Deployment)
