@@ -1,6 +1,6 @@
-# BloodBank Management System
+# Cloud-Native BloodBank Management System
 
-A full-stack blood bank management system built with Next.js, Prisma, and MySQL.
+A production-ready, highly available blood bank management system built with **Next.js**, **Prisma**, and **MySQL**. Engineered with a strong focus on advanced **AWS Cloud Architecture**, **DevSecOps**, and fully automated **CI/CD pipelines**.
 
 ## Tech Stack
 
