@@ -221,9 +221,19 @@ By strictly utilizing Spot instances, a single shared NAT Gateway, and micro-dat
 
 ### Step-by-Step AWS Setup for forkers
 
-If you have forked this repository and want to host it on your own AWS account, follow these steps strictly:
+#### 1. Configure AWS CLI (IAM Access)
+Before you can deploy anything, you must securely authenticate your local terminal with your AWS Account.
+1. Log into your **AWS Console**.
+2. Search for **IAM** and navigate to **Users** -> **Create user**.
+3. Name the user (e.g., `terraform-deployer`) and attach the `AdministratorAccess` policy to it.
+4. Once created, click on the user, navigate to **Security credentials**, and click **Create access key**. Select "Command Line Interface (CLI)".
+5. Open your local PowerShell terminal and run:
+   ```bash
+   aws configure
+   ```
+6. Paste your **Access Key ID** and **Secret Access Key** when prompted. Set your default region to `ap-south-1`.
 
-#### 1. Setup Deployment Variables
+#### 2. Setup Deployment Variables
 All passwords and sensitive tokens are managed via Terraform variables and injected into AWS Secrets Manager. 
 
 Navigate to the terraform directory:
@@ -240,7 +250,7 @@ cp terraform.tfvars.example terraform.tfvars
 
 > ⚠️ **Note:** `terraform.tfvars` is intentionally included in `.gitignore` so your secrets are never accidentally pushed to GitHub.
 
-#### 2. Deploy Infrastructure
+#### 3. Deploy Infrastructure
 We have provided comprehensive PowerShell scripts that completely automate the provisioning, Docker building, database pushing, and AWS deployments natively for Windows machines. 
 
 Open a PowerShell terminal as Administrator, authenticate with your AWS CLI locally, and run:
@@ -255,14 +265,14 @@ This single script will:
 - Attempt to automate Prisma database schema pushing
 - Force-deploy the latest container onto your ECS cluster
 
-#### 3. Confirm AWS Email Verifications
+#### 4. Confirm AWS Email Verifications
 As Terraform provisions your resources, AWS will automatically send two important emails to the `notification_email` you provided in `terraform.tfvars`:
 1. **AWS Notification - Subscription Confirmation:** This is from Amazon SNS. Click the `Confirm subscription` link in this email to authorize AWS to send you emergency CloudWatch infrastructure alerts.
 2. **Amazon Web Services – Email Address Verification Request:** This is from Amazon SES. Click the verification link to securely prove you own the email address. This allows your backend API to send outbound emails (like appointments and OTPs) naturally using this address.
 
 > ⚠️ **Critical:** Your system cannot send or receive emails until you physically click both links!
 
-#### 4. Connect GitHub to AWS CodePipeline
+#### 5. Connect GitHub to AWS CodePipeline
 Because your AWS account needs permission to read your public GitHub repository during automated builds, Terraform creates a pending connection.
 
 1. Log into your **AWS Console**.
@@ -271,7 +281,7 @@ Because your AWS account needs permission to read your public GitHub repository 
 4. Click on it and choose **Update pending connection**.
 5. Follow the prompts to authorize AWS to access your GitHub repositories.
 
-#### 5. Future Deployments & CI/CD
+#### 6. Future Deployments & CI/CD
 Once the GitHub connection is active and your first Fargate instances are live:
 * **To push a new update**: Simply commit your changes to the `main` branch of your GitHub repository. AWS CodePipeline will automatically fetch the new code, rebuild the Docker image, and perform a rolling update natively.
 
