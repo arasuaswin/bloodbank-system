@@ -7,8 +7,11 @@ import { auth } from "@/auth"
 const requestSchema = z.object({
     reci_name: z.string().min(2),
     reci_bgrp: z.string().min(1),
-    reci_bqnty: z.coerce.number().min(1),
+    reci_bqnty: z.coerce.number().min(1).max(10),
     reci_id: z.coerce.number().min(1),
+    urgency: z.string().optional().default("Normal"),
+    purpose: z.string().optional(),
+    hospital: z.string().optional(),
 })
 
 export async function POST(request: Request) {
@@ -27,18 +30,28 @@ export async function POST(request: Request) {
         })
 
         if (!recipient) {
-            return NextResponse.json({ error: "Invalid Recipient ID or Name" }, { status: 400 })
+            return NextResponse.json({ error: "Invalid Recipient ID or Name. Please check your registration details." }, { status: 400 })
         }
 
         const newRequest = await prisma.blood_request.create({
-            data: validatedData
+            data: {
+                reci_name: validatedData.reci_name,
+                reci_bgrp: validatedData.reci_bgrp,
+                reci_bqnty: validatedData.reci_bqnty,
+                reci_id: validatedData.reci_id,
+                urgency: validatedData.urgency || "Normal",
+                purpose: validatedData.purpose || null,
+                hospital: validatedData.hospital || null,
+                status: "PENDING",
+            }
         })
 
-        // Send Email Alert
+        // Send Email Alert with urgency info
+        const urgencyLabel = validatedData.urgency === "Critical" ? "🔴 CRITICAL" : validatedData.urgency === "Urgent" ? "🟡 URGENT" : "🟢 Normal"
         await sendEmail(
             process.env.ADMIN_EMAIL || "admin@bloodbank.com",
-            "New Blood Request Received",
-            `A new request for ${validatedData.reci_bqnty} units of ${validatedData.reci_bgrp} has been placed by ${validatedData.reci_name}.`
+            `${urgencyLabel} Blood Request — ${validatedData.reci_bqnty} units ${validatedData.reci_bgrp}`,
+            `A ${validatedData.urgency} request for ${validatedData.reci_bqnty} units of ${validatedData.reci_bgrp} has been placed by ${validatedData.reci_name}.\n\nHospital: ${validatedData.hospital || 'Not specified'}\nPurpose: ${validatedData.purpose || 'Not specified'}`
         )
 
         return NextResponse.json(newRequest, { status: 201 })
@@ -93,7 +106,7 @@ export async function PATCH(req: Request) {
             })
 
             if (!stock || (stock.B_qnty || 0) < request.reci_bqnty) {
-                return NextResponse.json({ error: "Insufficient Stock" }, { status: 400 })
+                return NextResponse.json({ error: `Insufficient stock for ${request.reci_bgrp}. Available: ${stock?.B_qnty || 0} units.` }, { status: 400 })
             }
 
             // Deduct Stock
@@ -102,16 +115,18 @@ export async function PATCH(req: Request) {
                 data: { B_qnty: { decrement: request.reci_bqnty } }
             })
 
-            // Delete request (it's fulfilled)
-            await prisma.blood_request.delete({
-                where: { id: parseInt(id) }
+            // Update status to APPROVED instead of deleting
+            await prisma.blood_request.update({
+                where: { id: parseInt(id) },
+                data: { status: "APPROVED" }
             })
 
-            return NextResponse.json({ message: "Approved and Stock Deducted" })
+            return NextResponse.json({ message: `Approved — ${request.reci_bqnty} units of ${request.reci_bgrp} deducted from stock.` })
         } else {
-            // Reject - just delete
-            await prisma.blood_request.delete({
-                where: { id: parseInt(id) }
+            // Update status to REJECTED instead of deleting
+            await prisma.blood_request.update({
+                where: { id: parseInt(id) },
+                data: { status: "REJECTED" }
             })
             return NextResponse.json({ message: "Request Rejected" })
         }

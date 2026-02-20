@@ -7,6 +7,8 @@ import { EmailTemplates } from "@/lib/email-templates"
 
 const appointmentSchema = z.object({
     date: z.string().transform((str) => new Date(str)),
+    donation_type: z.string().optional().default("Whole Blood"),
+    units: z.coerce.number().min(1).max(3).optional().default(1),
 })
 
 export async function GET() {
@@ -41,13 +43,15 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json()
-        const { date } = appointmentSchema.parse(body)
+        const { date, donation_type, units } = appointmentSchema.parse(body)
 
         const appointment = await prisma.appointment.create({
             data: {
                 donor_id: parseInt(session.user.id),
                 date: date,
-                status: "PENDING"
+                status: "PENDING",
+                donation_type: donation_type || "Whole Blood",
+                units: units || 1,
             }
         })
 

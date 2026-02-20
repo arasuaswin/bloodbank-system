@@ -4,21 +4,27 @@ import { useState, useEffect } from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Calendar as CalendarIcon, Clock } from "lucide-react"
+import { Loader2, Calendar as CalendarIcon, Clock, Droplet, Info } from "lucide-react"
 import { format } from "date-fns"
 
 interface Appointment {
     id: number
     date: string
     status: string
+    donation_type: string | null
+    units: number | null
+    notes: string | null
     created_at: string
 }
 
 export default function DonorAppointments() {
     const { toast } = useToast()
     const [date, setDate] = useState<Date | undefined>()
+    const [donationType, setDonationType] = useState("Whole Blood")
+    const [units, setUnits] = useState("1")
     const [appointments, setAppointments] = useState<Appointment[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isBooking, setIsBooking] = useState(false)
@@ -47,7 +53,11 @@ export default function DonorAppointments() {
             const res = await fetch('/api/appointments', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ date: date.toISOString() }),
+                body: JSON.stringify({
+                    date: date.toISOString(),
+                    donation_type: donationType,
+                    units: parseInt(units),
+                }),
             })
 
             if (!res.ok) {
@@ -55,8 +65,9 @@ export default function DonorAppointments() {
                 throw new Error(data.error || "Failed to book")
             }
 
-            toast({ title: "Success", description: "Appointment requested successfully!" })
+            toast({ title: "Success ✅", description: `${donationType} donation appointment requested for ${format(date, "PPP")}!` })
             fetchAppointments()
+            setDate(undefined)
         } catch (error: any) {
             toast({ title: "Error", description: error.message, variant: "destructive" })
         } finally {
@@ -73,6 +84,15 @@ export default function DonorAppointments() {
         }
     }
 
+    const donationIntervals: Record<string, string> = {
+        'Whole Blood': '90 days gap required (NBTC)',
+        'Platelets': '14 days gap (max 24 times/year)',
+        'Plasma': '48 hours gap',
+    }
+
+    // Max units per donation type
+    const maxUnits = donationType === 'Platelets' ? 3 : 1
+
     return (
         <div className="space-y-6">
             <div className="md:flex gap-8 items-start">
@@ -80,7 +100,9 @@ export default function DonorAppointments() {
                 {/* Booking Section */}
                 <Card className="w-full md:w-auto shrink-0">
                     <CardHeader>
-                        <CardTitle>Book Appointment</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                            <Droplet className="w-5 h-5 text-red-600" /> Book Donation Appointment
+                        </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <Calendar
@@ -94,13 +116,45 @@ export default function DonorAppointments() {
                                 return d < today;
                             }}
                         />
+
+                        {/* Donation Type */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Donation Type</label>
+                            <Select value={donationType} onValueChange={(v) => { setDonationType(v); setUnits("1"); }}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Whole Blood">🩸 Whole Blood (350-450ml)</SelectItem>
+                                    <SelectItem value="Platelets">🔬 Platelets (SDP/RDP)</SelectItem>
+                                    <SelectItem value="Plasma">💉 Plasma (FFP)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Info className="w-3 h-3" /> {donationIntervals[donationType]}
+                            </p>
+                        </div>
+
+                        {/* Units */}
+                        {donationType === 'Platelets' && (
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Units (SDP)</label>
+                                <Select value={units} onValueChange={setUnits}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="1">1 Unit</SelectItem>
+                                        <SelectItem value="2">2 Units</SelectItem>
+                                        <SelectItem value="3">3 Units</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
                         <Button
                             className="w-full bg-red-600 hover:bg-red-700"
                             onClick={handleBookAppointment}
                             disabled={isBooking || !date}
                         >
                             {isBooking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />}
-                            Request Appointment
+                            Request {donationType} Donation
                         </Button>
                     </CardContent>
                 </Card>
@@ -114,7 +168,7 @@ export default function DonorAppointments() {
                         {isLoading ? (
                             <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
                         ) : appointments.length === 0 ? (
-                            <p className="text-gray-500 text-center py-4">No appointments found.</p>
+                            <p className="text-gray-500 text-center py-4">No appointments found. Book your first donation!</p>
                         ) : (
                             <div className="space-y-4">
                                 {appointments.map((apt) => (
@@ -125,7 +179,14 @@ export default function DonorAppointments() {
                                             </div>
                                             <div>
                                                 <p className="font-medium">{format(new Date(apt.date), "PPP")}</p>
-                                                <p className="text-sm text-muted-foreground">Requested on {format(new Date(apt.created_at), "PP")}</p>
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                    <span>{apt.donation_type || 'Whole Blood'}</span>
+                                                    <span>•</span>
+                                                    <span>{apt.units || 1} unit(s)</span>
+                                                </div>
+                                                {apt.notes && (
+                                                    <p className="text-xs text-blue-600 mt-1">📝 {apt.notes}</p>
+                                                )}
                                             </div>
                                         </div>
                                         <Badge className={`${getStatusColor(apt.status)} text-white`}>

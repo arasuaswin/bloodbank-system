@@ -9,6 +9,11 @@ const recipientSchema = z.object({
     reci_sex: z.enum(["Male", "Female", "Other"]),
     reci_phno: z.string().regex(/^\d{10}$/, "Phone must be 10 digits"),
     reci_bgrp: z.string().min(1),
+    reci_hospital: z.string().min(2).optional(),
+    reci_doctor: z.string().optional(),
+    reci_address: z.string().optional(),
+    reci_urgency: z.string().optional().default("Normal"),
+    reci_purpose: z.string().optional(),
 })
 
 export async function POST(request: Request) {
@@ -34,6 +39,11 @@ export async function POST(request: Request) {
                 reci_sex: data.reci_sex,
                 reci_phno: data.reci_phno,
                 reci_bgrp: data.reci_bgrp,
+                reci_hospital: data.reci_hospital || null,
+                reci_doctor: data.reci_doctor || null,
+                reci_address: data.reci_address || null,
+                reci_urgency: data.reci_urgency || "Normal",
+                reci_purpose: data.reci_purpose || null,
                 reci_reg_date: new Date(),
             }
         })

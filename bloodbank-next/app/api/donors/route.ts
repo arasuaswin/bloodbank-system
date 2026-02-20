@@ -14,6 +14,9 @@ const donorSchema = z.object({
     D_weight: z.coerce.number().min(45, "Weight must be at least 45kg").optional(),
     D_email: z.string().email("Invalid email"),
     D_address: z.string().max(100).optional(),
+    D_state: z.string().optional(),
+    D_aadhaar: z.string().length(4).optional().or(z.literal('')),
+    D_donation_type: z.string().optional().default("Whole Blood"),
     last_donation: z.coerce.date().optional().nullable(),
     diseases: z.string().optional(),
     HLevel: z.string().optional(),
@@ -103,6 +106,9 @@ export async function GET() {
                 D_sex: true,
                 D_age: true,
                 D_address: true,
+                D_state: true,
+                D_donation_type: true,
+                D_units_donated: true,
                 last_donation: true,
                 eligibility: true
             }
