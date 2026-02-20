@@ -43,8 +43,8 @@ A production-ready, highly available blood bank management system built with **N
 ### Setup Steps
 1. Clone the repository and navigate to the Next.js directory:
    ```bash
-   git clone https://github.com/<your-username>/Bloodbank-management-system.git
-   cd Bloodbank-management-system/bloodbank-next
+   git clone https://github.com/arasuaswin/bloodbank-system.git
+   cd bloodbank-system/bloodbank-next
    ```
 2. Copy the environment file and configure your database and secrets:
    ```bash
@@ -174,7 +174,7 @@ cp terraform.tfvars.example terraform.tfvars
 ```
 **Open `terraform.tfvars` and fill it out completely.** 
 * Set strong passwords for `db_password` (min 12 chars), `admin_password` (min 8 chars), and `nextauth_secret` (generate one using `openssl rand -base64 32`).
-* Provide your GitHub repository string (e.g., `YourUsername/bloodbank-management-system`).
+* Provide your GitHub repository string (e.g., `arasuaswin/bloodbank-system`).
 
 > ⚠️ **Note:** `terraform.tfvars` is intentionally included in `.gitignore` so your secrets are never accidentally pushed to GitHub.
 
