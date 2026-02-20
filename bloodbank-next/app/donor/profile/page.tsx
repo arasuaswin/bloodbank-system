@@ -41,14 +41,14 @@ export default function DonorProfilePage() {
                 if (!res.ok) throw new Error("Failed to search profile")
                 const data = await res.json()
                 form.reset({
-                    D_name: data.D_name,
-                    D_email: data.D_email,
-                    D_phno: data.D_phno,
-                    D_weight: data.D_weight,
+                    D_name: data.D_name || "",
+                    D_email: data.D_email || "",
+                    D_phno: data.D_phno || "",
+                    D_weight: data.D_weight || undefined,
                     D_address: data.D_address || "",
                     diseases: data.diseases || "",
-                    D_bgrp: data.D_bgrp,
-                    D_age: data.D_age,
+                    D_bgrp: data.D_bgrp || undefined,
+                    D_age: data.D_age || undefined,
                 })
             } catch (error) {
                 toast({ title: "Error", description: "Could not load profile", variant: "destructive" })
@@ -96,11 +96,11 @@ export default function DonorProfilePage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <FormLabel>Name</FormLabel>
-                                    <Input value={form.getValues('D_name')} disabled className="bg-gray-100" />
+                                    <Input value={form.getValues('D_name') || ''} disabled className="bg-gray-100" />
                                 </div>
                                 <div className="space-y-2">
                                     <FormLabel>Email</FormLabel>
-                                    <Input value={form.getValues('D_email')} disabled className="bg-gray-100" />
+                                    <Input value={form.getValues('D_email') || ''} disabled className="bg-gray-100" />
                                 </div>
 
                                 <FormField
@@ -121,7 +121,7 @@ export default function DonorProfilePage() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Age</FormLabel>
-                                            <FormControl><Input type="number" {...field} /></FormControl>
+                                            <FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -133,7 +133,7 @@ export default function DonorProfilePage() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Weight (kg)</FormLabel>
-                                            <FormControl><Input type="number" {...field} /></FormControl>
+                                            <FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -145,7 +145,7 @@ export default function DonorProfilePage() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Blood Group</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <Select onValueChange={field.onChange} value={field.value || ''}>
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
                                                 <SelectContent>
                                                     {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
