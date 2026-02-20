@@ -160,6 +160,18 @@ This project has been heavily optimized for cloud environments, significantly re
 ### AWS Services & Cost Optimization Strategy
 This project leverages a vast array of enterprise-grade AWS services. Architectural decisions were made to provide 99.99% high availability while keeping the billing tightly optimized:
 
+#### Estimated Monthly Infrastructure Costs
+By strictly utilizing Spot instances, a single shared NAT Gateway, and micro-databases, this enterprise-grade architecture has been aggressively optimized down to approximately **~$65.00 - $75.00 / month**.
+
+| Service | Specification / Optimization | Est. Monthly Cost |
+|---------|------------------------------|-------------------|
+| **Single NAT Gateway** | 1 NAT Gateway (Shared across all Subnets) | ~$32.00 |
+| **Application Load Balancer** | 1 ALB + minimal LCU usage | ~$16.00 |
+| **Amazon RDS (MySQL)** | `db.t3.micro` + 20GB `gp3` storage | ~$13.00 |
+| **ECS Fargate Spot** | 1-4 Tasks (0.25 vCPU, 0.5GB RAM) on Spot | ~$3.00 - $5.00 |
+| **CloudFront, KMS, SES, Secrets Manager** | Pay-per-use (Highly caches / Free Tier applicable) | ~$1.00 - $4.00 |
+| **Total** | | **~$65.00 - $70.00 / month** |
+
 #### 1. Compute & Container Orchestration
 * **Amazon ECS & Fargate Spot:** Orchestrates the Next.js Docker containers serverlessly. Auto-scaling is configured to dynamically scale from 1 to 4 instances when CPU utilization crosses 70%.
   * **Cost Optimization:** Instead of standard on-demand Fargate pricing, the cluster is assigned a `FARGATE_SPOT` capacity provider weight. This runs the application on surplus AWS compute power, yielding up to **70% cost savings**.
