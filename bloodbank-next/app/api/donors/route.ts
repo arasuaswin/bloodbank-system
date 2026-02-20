@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma"
 import { z } from 'zod'
 import { auth } from "@/auth"
 import bcrypt from "bcryptjs"
-import { verifyRegistrationToken } from "@/lib/jwt"
 
 // Validation Schema
 const donorSchema = z.object({
@@ -20,20 +19,13 @@ const donorSchema = z.object({
     HLevel: z.string().optional(),
     BS: z.string().optional(),
     BP: z.string().optional(),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    verificationToken: z.string().min(1, "Verification token is required")
+    password: z.string().min(6, "Password must be at least 6 characters")
 })
 
 export async function POST(request: Request) {
     try {
         const body = await request.json()
         const validatedData = donorSchema.parse(body)
-
-        // 1. Verify OTP Token
-        const decoded = verifyRegistrationToken(validatedData.verificationToken)
-        if (!decoded || decoded.email !== validatedData.D_email) {
-            return NextResponse.json({ error: "Invalid or expired verification token" }, { status: 400 })
-        }
 
         // 2. Check if phone or email already exists
         const existingDonor = await prisma.donor.findFirst({
@@ -61,7 +53,7 @@ export async function POST(request: Request) {
         }
 
         // Remove non-db fields
-        const { verificationToken, password, ...donorData } = validatedData
+        const { password, ...donorData } = validatedData
 
         const newDonor = await prisma.donor.create({
             data: {
