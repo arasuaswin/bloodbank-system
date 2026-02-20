@@ -18,7 +18,7 @@ interface Appointment {
 
 export default function DonorAppointments() {
     const { toast } = useToast()
-    const [date, setDate] = useState<Date | undefined>(new Date())
+    const [date, setDate] = useState<Date | undefined>()
     const [appointments, setAppointments] = useState<Appointment[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isBooking, setIsBooking] = useState(false)
@@ -88,7 +88,11 @@ export default function DonorAppointments() {
                             selected={date}
                             onSelect={setDate}
                             className="rounded-md border"
-                            disabled={(date) => date < new Date()}
+                            disabled={(d) => {
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                return d < today;
+                            }}
                         />
                         <Button
                             className="w-full bg-red-600 hover:bg-red-700"
