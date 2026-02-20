@@ -138,10 +138,26 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host '  Docker tag failed!' -ForegroundColor Red
     exit $LASTEXITCODE
 }
-docker push $TAG_URL
-if ($LASTEXITCODE -ne 0) {
-    Write-Host '  Docker push failed!' -ForegroundColor Red
-    exit $LASTEXITCODE
+$pushAttempts = 0
+$maxPushAttempts = 5
+$pushSuccess = $false
+
+while ($pushAttempts -lt $maxPushAttempts -and -not $pushSuccess) {
+    $pushAttempts++
+    Write-Host ("  Pushing to ECR (Attempt $pushAttempts/$maxPushAttempts)...") -ForegroundColor Cyan
+    docker push $TAG_URL
+    if ($LASTEXITCODE -eq 0) {
+        $pushSuccess = $true
+    }
+    else {
+        Write-Host "  Docker push interrupted by proxy timeout. Retrying in 5 seconds..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 5
+    }
+}
+
+if (-not $pushSuccess) {
+    Write-Host '  Docker push failed after maximum retries!' -ForegroundColor Red
+    exit 1
 }
 
 # ============ STEP 6: Run Database Migration ============
