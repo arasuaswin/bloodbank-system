@@ -148,14 +148,19 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ''
 Write-Host '[6/7] Running Database Migration (Prisma)...' -ForegroundColor Yellow
 # Get the DATABASE_URL from Secrets Manager
+$oldErrorAction = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
 $SECRET_ARN = aws secretsmanager list-secrets --filter Key=name, Values=bloodbank-gms-app-secrets --query 'SecretList[0].ARN' --output text --region $REGION 2>$null
+
 if ($SECRET_ARN -and $SECRET_ARN -ne 'None') {
-    $SECRETS = aws secretsmanager get-secret-value --secret-id $SECRET_ARN --query SecretString --output text --region $REGION | ConvertFrom-Json
+    $SECRETS = aws secretsmanager get-secret-value --secret-id $SECRET_ARN --query SecretString --output text --region $REGION 2>$null | ConvertFrom-Json
     $env:DATABASE_URL = $SECRETS.DATABASE_URL
 
     $PATH_TO_GOTO = $ROOT + '\bloodbank-next'
     Set-Location -Path $PATH_TO_GOTO
     npx prisma db push --skip-generate 2>$null
+    $ErrorActionPreference = $oldErrorAction
+
     if ($LASTEXITCODE -eq 0) {
         Write-Host '  Database schema pushed successfully.' -ForegroundColor Green
     }
@@ -165,6 +170,7 @@ if ($SECRET_ARN -and $SECRET_ARN -ne 'None') {
     Remove-Item Env:\DATABASE_URL -ErrorAction SilentlyContinue
 }
 else {
+    $ErrorActionPreference = $oldErrorAction
     Write-Host '  Secrets not found yet. ECS will handle migration on first boot.' -ForegroundColor Gray
 }
 
