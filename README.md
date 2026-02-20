@@ -59,10 +59,19 @@ A full-stack blood bank management system built with Next.js, Prisma, and MySQL.
    npx prisma db push
    node prisma/seed.js
    ```
-5. Start the development server:
+6. Start the development server:
    ```bash
    npm run dev
    ```
+
+### Local Production Build (Windows)
+If you want to test the fully compiled production version of the application locally, you can use the included `deploy.bat` script inside the Next.js directory:
+
+```cmd
+cd bloodbank-next
+deploy.bat
+```
+This script will automatically generate the Prisma client, push your database schema, run the Next.js production compiler, and start the application on `http://localhost:3000`.
 
 ---
 
