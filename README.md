@@ -150,6 +150,13 @@ This repository leverages advanced DevOps methodologies to ensure seamless updat
 * **Circuit Breaker Rollbacks**: If a bad deployment occurs (e.g., application crashes on start), ECS automatically halts the deployment and rolls back to the previous stable version.
 * **Secure Secret Injection**: No passwords are kept in code or environment files on the server. AWS Secrets Manager injects credentials securely into the ECS task at runtime.
 
+### Containerization & Application Performance
+This project has been heavily optimized for cloud environments, significantly reducing AWS networking costs and startup latency:
+1. **Next.js Standalone Output**: The Next.js configuration (`output: "standalone"`) automatically traces imports and bundles only the necessary node_modules. This shrinks the Docker image size by over **80%**, drastically reducing ECR storage costs and accelerating ECS deployment times.
+2. **Multi-Stage Docker Builds**: The `Dockerfile` separates dependency installation (`deps`), compilation (`builder`), and execution (`runner`). The final production image discards the heavy compilation toolchains entirely.
+3. **Least Privilege Execution**: The Docker container refuses to run as root. It creates a dedicated unprivileged `nextjs` user (`uid 1001`), completely nullifying entire classes of container escape vulnerabilities.
+4. **Auto-Migration Script**: Database schema pushing is not an afterthought. The container spins up executing `start.js`, which detects if the Prisma database is in sync with the application code and automatically triggers migrations *before* booting the listener.
+
 ### Step-by-Step AWS Setup for forkers
 
 If you have forked this repository and want to host it on your own AWS account, follow these steps strictly:
