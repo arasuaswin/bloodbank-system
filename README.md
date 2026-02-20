@@ -167,10 +167,10 @@ This project leverages a vast array of enterprise-grade AWS services. Architectu
 #### 2. Global Delivery & Network Security
 * **Amazon CloudFront:** A global CDN that distributes Next.js static assets (`/_next/static/*` and `/images/*`) and caches them at edge locations worldwide. It enforces HTTPS and acts as a shield against DDoS attacks.
   * **Cost Optimization:** By offloading static file serving to CloudFront, we reduce the traffic and CPU load on the ECS containers. We explicitly restrict the `PriceClass` to `PriceClass_200` to avoid the most expensive edge regions (like South America).
-* **Application Load Balancer (ALB):** Terminates SSL connections and distributes internet traffic evenly among the Fargate containers. 
+* **Application Load Balancer (ALB):** Terminates SSL connections and distributes internet traffic evenly among the Fargate containers across different Availability Zones. 
   * **Cost Optimization & Impact:** This enables **Zero-Downtime Deployments**. The Target Group is finely tuned to health-check new containers and deregister failing ones extremely quickly, ensuring no traffic or compute seconds are wasted on crashed instances.
-* **Amazon VPC & Single NAT Gateway:** The network is divided into 2 Public Subnets (for ALB) and 2 Private Subnets (for Fargate and RDS). 
-  * **Cost Optimization:** Enterprise setups often use one NAT Gateway *per Availability Zone*, which doubles or triples the massive hourly network fee. We explicitly provision a **Single NAT Gateway** for the entire VPC, instantly slashing fixed monthly network pricing by 50% while still allowing private instances to pull updates and send outbound SES API calls.
+* **Amazon VPC (Multi-AZ Architecture) & Single NAT Gateway:** The network is intentionally divided across **Two separate Availability Zones (AZ-a and AZ-b)**. It features 2 Public Subnets (for the ALB) and 2 Private Subnets (for Fargate and RDS) spanning distinct physical data centers. This ensures the application remains online even if an entire AWS facility goes offline.
+  * **Cost Optimization:** Enterprise setups often use one NAT Gateway *per Availability Zone* for perfect redundancy, which doubles or triples the massive hourly network fee. To balance cost and availability, we explicitly provision a **Single NAT Gateway** for the entire VPC, instantly slashing fixed monthly network pricing by 50% while still allowing private instances across both AZs to pull updates and send outbound SES API calls.
 
 #### 3. Database & Storage
 * **Amazon RDS MySQL 8.0:** A fully managed, highly secure relational database hidden safely inside the Private Subnets. It provides automated daily backups and multi-AZ failover capabilities if configured.
