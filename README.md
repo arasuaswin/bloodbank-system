@@ -229,7 +229,14 @@ This single script will:
 - Attempt to automate Prisma database schema pushing
 - Force-deploy the latest container onto your ECS cluster
 
-#### 3. Connect GitHub to AWS CodePipeline
+#### 3. Confirm AWS Email Verifications
+As Terraform provisions your resources, AWS will automatically send two important emails to the `notification_email` you provided in `terraform.tfvars`:
+1. **AWS Notification - Subscription Confirmation:** This is from Amazon SNS. Click the `Confirm subscription` link in this email to authorize AWS to send you emergency CloudWatch infrastructure alerts.
+2. **Amazon Web Services – Email Address Verification Request:** This is from Amazon SES. Click the verification link to securely prove you own the email address. This allows your backend API to send outbound emails (like appointments and OTPs) naturally using this address.
+
+> ⚠️ **Critical:** Your system cannot send or receive emails until you physically click both links!
+
+#### 4. Connect GitHub to AWS CodePipeline
 Because your AWS account needs permission to read your public GitHub repository during automated builds, Terraform creates a pending connection.
 
 1. Log into your **AWS Console**.
@@ -238,7 +245,7 @@ Because your AWS account needs permission to read your public GitHub repository 
 4. Click on it and choose **Update pending connection**.
 5. Follow the prompts to authorize AWS to access your GitHub repositories.
 
-#### 4. Future Deployments & CI/CD
+#### 5. Future Deployments & CI/CD
 Once the GitHub connection is active and your first Fargate instances are live:
 * **To push a new update**: Simply commit your changes to the `main` branch of your GitHub repository. AWS CodePipeline will automatically fetch the new code, rebuild the Docker image, and perform a rolling update natively.
 
