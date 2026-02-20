@@ -126,7 +126,8 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ''
 Write-Host '[5/7] Pushing to Amazon ECR...' -ForegroundColor Yellow
 $ECR_HOST = $ECR_REPO_URL.Split('/')[0]
-aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ECR_HOST
+$ECR_PASS = aws ecr get-login-password --region $REGION
+docker login --username AWS --password $ECR_PASS $ECR_HOST
 if ($LASTEXITCODE -ne 0) {
     Write-Host '  Docker login to ECR failed!' -ForegroundColor Red
     exit $LASTEXITCODE
