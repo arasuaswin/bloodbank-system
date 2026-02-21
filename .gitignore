@@ -44,3 +44,9 @@ terraform/.terraform.lock.hcl
 # Misc
 *.tgz
 coverage/
+
+# Logs (may contain real AWS endpoints/infrastructure details)
+*.log
+logs.json
+logs.txt
+logs*.txt
